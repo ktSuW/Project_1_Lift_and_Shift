@@ -1,0 +1,75 @@
+metadata comments = 'Template used to create a app service on windows.'
+
+@description('(required) Web app name.')
+@minLength(2)
+param webAppName string
+
+@description('(required) app service plan name.')
+@minLength(2)
+param aspPortalName string
+
+@description('(required) Location for all resources.')
+param location string = resourceGroup().location
+
+@description('(optional) The language stack of the app.')
+@allowed([
+  '.net'
+  'php'
+  'node'
+  'html'
+])
+param language string = '.net'
+
+@description('true = deploy a sample Hello World app.')
+param helloWorld bool = false
+
+@description('Optional Git Repo URL')
+param repoUrl string = ''
+
+var aspPortalNameId = 'subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().name}/providers/Microsoft.Web/serverfarms/asp-${aspPortalName}'
+var gitRepoReference = {
+  '.net': 'https://github.com/Azure-Samples/app-service-web-dotnet-get-started'
+  node: 'https://github.com/Azure-Samples/nodejs-docs-hello-world'
+  php: 'https://github.com/Azure-Samples/php-docs-hello-world'
+  html: 'https://github.com/Azure-Samples/html-docs-hello-world'
+}
+var gitRepoUrl = (bool(helloWorld) ? gitRepoReference[toLower(language)] : repoUrl)
+var configReference = {
+  '.net': {
+    comments: '.Net app. No additional configuration needed.'
+  }
+  html: {
+    comments: 'HTML app. No additional configuration needed.'
+  }
+  php: {
+    phpVersion: '7.4'
+  }
+  node: {
+    appSettings: [
+      {
+        name: 'WEBSITE_NODE_DEFAULT_VERSION'
+        value: '12.15.0'
+      }
+    ]
+  }
+}
+
+resource webApp 'Microsoft.Web/sites@2020-06-01' = {
+  name: webAppName
+  location: location
+  properties: {
+    siteConfig: configReference[language]
+    serverFarmId: aspPortalNameId
+  }
+}
+
+resource webAppName_web 'Microsoft.Web/sites/sourcecontrols@2020-06-01' = if (contains(gitRepoUrl, 'http')) {
+  parent: webApp
+  name: 'web'
+  location: location
+  properties: {
+    repoUrl: gitRepoUrl
+    branch: 'master'
+    isManualIntegration: true
+  }
+}

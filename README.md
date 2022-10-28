@@ -86,3 +86,4 @@ When you have the app running in Azure, you should be able to:
 ## Stretch
 
 If you get everything done, then think about how you could extend your deployment to make it more production-grade. Scale, high availabilty and the rollout process for application upgrades are all worth considering.
+
